@@ -1,22 +1,28 @@
 {
   "self": [
-            "c","h","o","n","cl","br","f","i","s"
+            ["c"],["o"],["h"],["n"],["cl"],["br"],["f"],["i"],["s"]
           ],
   "self_feature":
           [
-            "ch3", "c-2c", "c-3c", "cho", "cooh","-co-","c6","-coo-","conh2","cox","oh","ooh","-oo-","nh2","nh","n","cn"
+            ["c-1c"], ["c-2c"], ["c-3c"], ["c-2o-h","cho"], ["c-2o-1oh","cooh"],["c-2o-1c-1c","-co-"],["c6"],["c-2o-1oc","-coo-"],["conh2"],["cox"],["oh"],["ooh"],["-oo-"],["c-n","n"],["c-3n","cn"]
           ],
   "alpha_feature":
           [
-            "rch3", "rc-2c", "rc-3c", "rcho", "rcooh","r-co-","rc6","r-coo-","-coo-r","rconh2","rcox","roh","rooh","r-oo-","rnh2","rnh","rn","rcn"
+            ["rch3"], ["rc-2c"], ["rc-3c"], ["rcho"], ["rcooh"],["r-co-"],["rc6"],["r-coo-"],["-coo-r"],["rconh2"],["rcox"],["roh"],["rooh"],["r-oo-"],["rnh2"],["rnh"],["rn"],["rcn"]
           ],
   "beta_feature":
           [
-            "rch3", "rc-2c", "rc-3c", "rcho", "rcooh","r-co-","rc6","r-coo-","-coo-r","rconh2","rcox","roh","rooh","r-oo-","rnh2","rnh","rn","rcn"
+            ["rch3"], ["rc-2c"], ["rc-3c"], ["rcho"], ["rcooh"],["r-co-"],["rc6"],["r-coo-"],["-coo-r"],["rconh2"],["rcox"],["roh"],["rooh"],["r-oo-"],["rnh2"],["rnh"],["rn"],["rcn"]
           ],
   "comment":
           [
             "此行用于注释,不会被程序读入",
+            "字典的键用于表示此种特点的类型,如self_feature即是元素自身参与组成官能团,alpha_feature为与官能团直接相连",
+            "字典的值用于表示特点的名称,名称应储存于列表中,列表的首项需按命名规范(见下一条),其余项为别称(可省略)",
+            "命名规范1:用小写字母,'所连元素名称(或自身元素名称)'+'-'+'所连键数'+'连接的元素名称'+'连接的元素名称'.如c-2c表示碳碳双键",
+            "命名规范2:若有多个元素相连构成官能团,按键的数目从大到小,连接的元素按氧>氢>氮>氟>氯>溴>碘>硫>碳的顺序依次排开,如c-2o-1oh为羧基",
+            "命名规范3:氢前的1可省略",
+            "命名规范4:大π键不适用于以上三条规则",
             "This line is used as a comment and will not be read by the program."
           ]
 }
