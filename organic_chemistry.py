@@ -17,7 +17,6 @@ class Element:
             raise TypeError
         self.name = name
         self.bond_list = [None for _ in range(CHEMISTRY_BOND_DICT[name])]
-        self.left_index = 0
         # self.feature = 0b00000
         # self.feature += FEATURE_TABLE[name]
 
@@ -25,27 +24,30 @@ class Element:
     #     return self.feature == other.feature
 
     def add_bond(self, target_element, connect_num=1, is_first=True):
-        for i in range(connect_num):
-            if self.left_index < CHEMISTRY_BOND_DICT[self.name]:
-                self.bond_list[self.left_index] = target_element
-                self.left_index += 1
-            else:
-                raise OverflowError
-        if is_first:
-            target_element.add_bond(self, connect_num, False)
+        try:
+            left_index = self.bond_list.index(None)
+        except ValueError:
+            raise IndexError("list index out of range")
+        else:
+            for _ in range(connect_num):
+                self.bond_list[left_index] = target_element
+                left_index += 1
+            if is_first:
+                target_element.add_bond(self, connect_num, False)
         # self.feature += FEATURE_TABLE[str(connect_num) + target_element]
 
     def add_pi_pond(self, target_element_list, is_first=True):  # 注意target_element_list包含自身
         tmp_list = target_element_list.copy()
-        if self.left_index < CHEMISTRY_BOND_DICT[self.name]:
-            self.bond_list[self.left_index] = tmp_list
-            self.left_index += 1
+        try:
+            left_index = self.bond_list.index(None)
+        except ValueError:
+            raise IndexError("list index out of range")
         else:
-            raise OverflowError
-        if is_first:
-            target_element_list.remove(self)
-            for target_element in target_element_list:
-                target_element.add_pi_pond(tmp_list, False)
+            self.bond_list[left_index] = tmp_list
+            if is_first:
+                target_element_list.remove(self)
+                for target_element in target_element_list:
+                    target_element.add_pi_pond(tmp_list, False)
 
 
 c1 = Element("C")
