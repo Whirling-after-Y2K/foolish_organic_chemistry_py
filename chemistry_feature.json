@@ -1,0 +1,22 @@
+{
+  "self": [
+            "c","h","o","n","cl","br","f","i","s"
+          ],
+  "self_feature":
+          [
+            "ch3", "c-2c", "c-3c", "cho", "cooh","-co-","c6","-coo-","conh2","cox","oh","ooh","-oo-","nh2","nh","n","cn"
+          ],
+  "alpha_feature":
+          [
+            "rch3", "rc-2c", "rc-3c", "rcho", "rcooh","r-co-","rc6","r-coo-","-coo-r","rconh2","rcox","roh","rooh","r-oo-","rnh2","rnh","rn","rcn"
+          ],
+  "beta_feature":
+          [
+            "rch3", "rc-2c", "rc-3c", "rcho", "rcooh","r-co-","rc6","r-coo-","-coo-r","rconh2","rcox","roh","rooh","r-oo-","rnh2","rnh","rn","rcn"
+          ],
+  "comment":
+          [
+            "此行用于注释,不会被程序读入",
+            "This line is used as a comment and will not be read by the program."
+          ]
+}
