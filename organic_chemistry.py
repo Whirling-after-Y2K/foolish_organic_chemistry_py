@@ -2,12 +2,15 @@ import json
 
 CHEMISTRY_BOND_DICT = {'c': 4, 'o': 2, 'n': 3}
 HASH_FEATURE_TABLE = {}
+SAVE_NAME_NUM = 7
+MAX_FEATURE_NUM = SAVE_NAME_NUM  # 后7位用于储存self_name 元素名
+MAX_ID_NUM = 11  # 第一位弃用,二到十二位用于储存element_id 最多容纳2^11-2个原子
+element_id = -1
 
 with open("chemistry_feature.json", 'r', encoding='utf-8') as f:
     raw_feature_table = json.loads(f.read())
 del f
-SAVE_NAME_NUM = 6
-MAX_FEATURE_NUM = SAVE_NAME_NUM  # 前6位用于储存self_name
+
 tmp_index = 1
 
 for i in raw_feature_table:
@@ -24,7 +27,7 @@ for i in raw_feature_table:
     else:
         HASH_FEATURE_TABLE[i] = {}
         for j in raw_feature_table[i]:
-            MAX_FEATURE_NUM += 1
+            MAX_FEATURE_NUM += 1  # 每多一种特征就需要多一位进行储存
             HASH_FEATURE_TABLE[i][j[0]] = tmp_index
             tmp_index += 1
 
@@ -35,11 +38,16 @@ print(MAX_FEATURE_NUM, HASH_FEATURE_TABLE)
 
 class Element:
     def __init__(self, name: str):
+        global element_id
+        element_id += 1
+        if element_id > ((1 << MAX_ID_NUM) - 2):
+            raise OverflowError
         name = name.lower()
         self.name = name
         self.bond_list = [None for _ in range(CHEMISTRY_BOND_DICT[name])]
         self.feature = 1 << MAX_FEATURE_NUM
-        add_feature(self, "self_name", self.name)
+        self.feature += (element_id << MAX_FEATURE_NUM)
+        self.feature |= HASH_FEATURE_TABLE["self_name"][self.name]
         # self.feature = 0b00000
         # self.feature += FEATURE_TABLE[name]
 
@@ -76,18 +84,20 @@ class Element:
                     target_element.add_pi_pond(tmp_list, False)
 
 
-def inquire_feature(element: Element, feature_class: str, feature: str):
-    element_feature = element.feature
+def inquire_id(element_feature: int):
+    return (element_feature & (((1 << (MAX_FEATURE_NUM + MAX_ID_NUM)) - 1) & (~((1 << MAX_FEATURE_NUM) - 1))))>>MAX_FEATURE_NUM
+# 用于实现对id的查询,至于为什么不用字符串切片,大概是因为位运算它快吧
+
+# def update_id()
+
+def inquire_feature(element_feature: int, feature_class: str, feature: str):
     if feature_class == "self_name":
         return element_feature & (1 << SAVE_NAME_NUM)
     return element_feature & (1 << HASH_FEATURE_TABLE[feature_class][feature])
 
 
 def add_feature(element: Element, feature_class: str, feature: str):
-    if feature_class == "self_name":
-        element.feature |= HASH_FEATURE_TABLE[feature_class][feature]
-    else:
-        element.feature |= (1 << HASH_FEATURE_TABLE[feature_class][feature])
+    element.feature |= (1 << HASH_FEATURE_TABLE[feature_class][feature])
 
 
 def del_feature(element: Element, feature_class: str, feature: str):
@@ -127,6 +137,11 @@ c7 = Element("c")
 o1 = Element("o")
 o2 = Element("o")
 o3 = Element("o")
+print(inquire_id(c1.feature))
+print(inquire_id(c2.feature))
+print(inquire_id(c3.feature))
+print(inquire_id(c4.feature))
+
 c1.add_bond(o1, 2)
 c1.add_bond(c2)
 connect([c2, c3, c4, c5, c6, c7], True)
@@ -134,16 +149,17 @@ connect([c2, c3, c4, c5, c6, c7], True)
 c2.add_pi_pond([c2, c3, c4, c5, c6, c7])
 print(c1.name, id(c1))
 print()
-for i in c1.bond_list:
-    if type(i) is Element:
-        print(i.name, i.feature, id(i))
-print()
-for i in c2.bond_list:
-    if type(i) is Element:
-        print(i.name, i.feature, id(i))
-    elif type(i) is list:
-        print()
-        for j in i:
-            print(j.name, j.feature, id(j))
+# for i in c1.bond_list:
+#     if type(i) is Element:
+#         print(i.name, i.feature, id(i))
+# print()
+# for i in c2.bond_list:
+#     if type(i) is Element:
+#         print(i.name, i.feature, id(i))
+#     elif type(i) is list:
+#         print()
+#         for j in i:
+#             print(j.name, j.feature, id(j))
 print(c1.bond_list, c1)
 print(c2.bond_list, c2.name)
+# print(element_id)
