@@ -1,13 +1,13 @@
 import json
 
-CHEMISTRY_BOND_DICT = {'C': 4, 'O': 2, 'N': 3}
+CHEMISTRY_BOND_DICT = {'c': 4, 'o': 2, 'n': 3}
 HASH_FEATURE_TABLE = {}
 
 with open("chemistry_feature.json", 'r', encoding='utf-8') as f:
     raw_feature_table = json.loads(f.read())
 del f
-
-MAX_FEATURE_NUM = 5  # 前五位用于储存self_name
+SAVE_NAME_NUM = 6
+MAX_FEATURE_NUM = SAVE_NAME_NUM  # 前6位用于储存self_name
 tmp_index = 1
 
 for i in raw_feature_table:
@@ -39,7 +39,7 @@ class Element:
         self.name = name
         self.bond_list = [None for _ in range(CHEMISTRY_BOND_DICT[name])]
         self.feature = 1 << MAX_FEATURE_NUM
-        self.feature = add_feature(self.feature, "self_name", self.name)
+        add_feature(self, "self_name", self.name)
         # self.feature = 0b00000
         # self.feature += FEATURE_TABLE[name]
 
@@ -53,8 +53,7 @@ class Element:
                 self.bond_list[left_index] = target_element
                 left_index += 1
 
-            # 待实现: 实际调用
-            # self.feature = update_feature(self.feature, "direct_connection", target_element, connect_num)
+            update_feature(self, target_element, connect_num)
 
             if is_first:
                 target_element.add_bond(self, connect_num, False)
@@ -77,36 +76,42 @@ class Element:
                     target_element.add_pi_pond(tmp_list, False)
 
 
-def inquire_feature(element_feature: int, feature_class: str, feature: str):
+def inquire_feature(element: Element, feature_class: str, feature: str):
+    element_feature = element.feature
     if feature_class == "self_name":
-        return element_feature & (1 << 5)
+        return element_feature & (1 << SAVE_NAME_NUM)
     return element_feature & (1 << HASH_FEATURE_TABLE[feature_class][feature])
 
 
-def add_feature(element_feature: int, feature_class: str, feature: str):
+def add_feature(element: Element, feature_class: str, feature: str):
     if feature_class == "self_name":
-        element_feature |= HASH_FEATURE_TABLE[feature_class][feature]
-    element_feature |= (1 << HASH_FEATURE_TABLE[feature_class][feature])
-    return element_feature
+        element.feature |= HASH_FEATURE_TABLE[feature_class][feature]
+    else:
+        element.feature |= (1 << HASH_FEATURE_TABLE[feature_class][feature])
 
 
-def del_feature(element_feature: int, feature_class: str, feature: str):
+def del_feature(element: Element, feature_class: str, feature: str):
     if feature_class == "self_name":
         raise TypeError
-    element_feature &= ~(1 << HASH_FEATURE_TABLE[feature_class][feature])
-    return element_feature
+    else:
+        element.feature &= ~(1 << HASH_FEATURE_TABLE[feature_class][feature])
 
 
-def update_feature(element_feature: int, feature_class: str, target_element: Element, connect_num: int):
-    feature_name = HASH_FEATURE_TABLE["self_name"][element_feature & (1 << 5)] + "-" + str(
-        connect_num) + target_element.name
-
-    return
+def update_feature(element: Element, target_element: Element, connect_num: int, is_first=True):
+    if is_first:
+        feature_name = element.name + "-" + str(connect_num) + target_element.name
+        add_feature(element, "direct_connection", feature_name)
+    is_occupy = is_first
+    for indirect_connected in target_element.bond_list:
+        if indirect_connected is None:
+            if is_occupy:
+                is_occupy = False
+                continue
 
 
 def connect(target_element_list, is_cyclization=False):
-    for i in range(len(target_element_list) - 1):
-        target_element_list[i].add_bond(target_element_list[i + 1])
+    for tmp in range(len(target_element_list) - 1):
+        target_element_list[tmp].add_bond(target_element_list[tmp + 1])
     if is_cyclization:
         target_element_list[0].add_bond(target_element_list[-1])
 
@@ -127,16 +132,18 @@ c1.add_bond(c2)
 connect([c2, c3, c4, c5, c6, c7], True)
 
 c2.add_pi_pond([c2, c3, c4, c5, c6, c7])
-
+print(c1.name, id(c1))
+print()
 for i in c1.bond_list:
     if type(i) is Element:
-        print(i.name, i.feature)
+        print(i.name, i.feature, id(i))
 print()
 for i in c2.bond_list:
     if type(i) is Element:
-        print(i.name, i.feature)
+        print(i.name, i.feature, id(i))
     elif type(i) is list:
+        print()
         for j in i:
-            print(j.name, j.feature)
+            print(j.name, j.feature, id(j))
 print(c1.bond_list, c1)
 print(c2.bond_list, c2.name)
