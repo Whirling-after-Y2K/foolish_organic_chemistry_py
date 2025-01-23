@@ -37,8 +37,44 @@ del raw_feature_table
 print(MAX_FEATURE_NUM, HASH_FEATURE_TABLE)
 
 
+class Molecule:
+    def __init__(self, name):
+        self.name = name
+        self.composition = {}
+        self.feature_dict = {}
+        self.link_dict = {}
+        self.c_num = 0
+        self.o_num = 0
+        self.n_num = 0
+
+    def update_name(self, new_name):
+        self.name = new_name
+
+    def add_atom(self, atom_name, num=1):
+        atom_name = atom_name.lower()
+
+        match atom_name:
+            case "c":
+                atom_num = self.c_num
+                self.c_num += num
+            case "n":
+                atom_num = self.n_num
+                self.n_num += num
+            case "o":
+                atom_num = self.o_num
+                self.o_num += num
+            case _:
+                raise ValueError
+
+        for _ in range(num):
+            atom = Atom(atom_name, self)
+            self.composition[atom_name + str(atom_num)] = atom
+            self.feature_dict[atom_name + str(atom_num)] = atom.feature
+            atom_num += 1
+
+
 class Atom:
-    def __init__(self, name: str):
+    def __init__(self, name: str, molecule: Molecule):
         # global element_id
         # element_id += 1
         # if element_id > ((1 << MAX_ID_NUM) - 2):
@@ -47,8 +83,11 @@ class Atom:
         self.name = name
         self.bond_list = [None for _ in range(CHEMISTRY_BOND_DICT[name])]
         self.feature = 1 << MAX_FEATURE_NUM
+        self.overall_f = ""
         # self.feature += (element_id << MAX_FEATURE_NUM)
         self.feature |= HASH_FEATURE_TABLE[self.name]
+        self.belong = molecule
+        molecule.composition[self] = self.feature
         # self.feature = 0b00000
         # self.feature += FEATURE_TABLE[name]
 
@@ -58,14 +97,19 @@ class Atom:
         except ValueError:
             raise IndexError("list index out of range")
         else:
+            feature_name = self.name + "-" + str(connect_num) + target_atom.name
+            add_feature(self, feature_name)
+            update_feature(self, target_atom)
+
+            self.belong.composition[self] = self.feature
             for _ in range(connect_num):
                 self.bond_list[left_index] = target_atom
                 left_index += 1
 
-            update_feature(self, target_atom, connect_num)
 
-            if is_first:
-                target_atom.add_bond(self, connect_num, False)
+
+            # if is_first:
+            #     target_atom.add_bond(self, connect_num, False)
         # self.feature += FEATURE_TABLE[str(connect_num) + target_element]
 
     # def __eq__(self, other):
@@ -83,15 +127,6 @@ class Atom:
                 target_atom_list.remove(self)
                 for target_atom in target_atom_list:
                     target_atom.add_pi_pond(tmp_list, False)
-
-
-class Molecule:
-    def __init__(self):
-        self.composition = []
-
-    def add_atom(self, atom_name, num=1):
-        for _ in range(num):
-            self.composition.append(Atom(atom_name))
 
 
 '''
@@ -115,17 +150,20 @@ def del_feature(atom: Atom, feature: str):
     atom.feature &= ~(1 << HASH_FEATURE_TABLE[feature])
 
 
-def update_feature(atom: Atom, target_atom: Atom, connect_num: int):
+def update_feature(atom: Atom, target_atom: Atom):
     # if is_first:
-    feature_name = atom.name + "-" + str(connect_num) + target_atom.name
-    add_feature(atom, feature_name)
-    # is_occupy = is_first
-    # for indirect_connected in target_element.bond_list:
-    #     if indirect_connected is None:
-    #         if is_occupy:
-    #             is_occupy = False
-    #             continue
-
+    is_used = []
+    for indirect_index in range(len(target_atom.bond_list)):
+        if target_atom.bond_list[indirect_index] is None:
+            break
+        else:
+            if target_atom.bond_list[indirect_index] in is_used:
+                continue
+            target_atom.overall_f+=update_feature(target_atom, target_atom.bond_list[indirect_index])
+            is_used.append(target_atom.bond_list[indirect_index])
+    if target_atom.overall_f == "":
+        return str(target_atom.feature)
+    return target_atom.overall_f
 
 def connect(target_atom_list, is_cyclization=False):
     for tmp in range(len(target_atom_list) - 1):
@@ -135,21 +173,21 @@ def connect(target_atom_list, is_cyclization=False):
 
 
 if __name__ == '__main__':
-    benzaldehyde = Molecule()
-    benzaldehyde.add_atom('c', 7)
-    benzaldehyde.add_atom('o')
+    benzaldehyde = Molecule("benzaldehyde")
+    # benzaldehyde.add_atom('c', 7)
+    # benzaldehyde.add_atom('o')
 
-    c1 = Atom("C")
-    c2 = Atom("c")
-    c3 = Atom("c")
-    c4 = Atom("c")
-    c5 = Atom("c")
-    c6 = Atom("c")
-    c7 = Atom("c")
+    c1 = Atom("C", benzaldehyde)
+    c2 = Atom("c", benzaldehyde)
+    c3 = Atom("c", benzaldehyde)
+    c4 = Atom("c", benzaldehyde)
+    c5 = Atom("c", benzaldehyde)
+    c6 = Atom("c", benzaldehyde)
+    c7 = Atom("c", benzaldehyde)
     # c1-c7 o1 构成苯醛
-    o1 = Atom("o")
-    o2 = Atom("o")
-    o3 = Atom("o")
+    o1 = Atom("o", benzaldehyde)
+    # o2 = Atom("o", benzaldehyde)
+    # o3 = Atom("o", benzaldehyde)
 
     c1.add_bond(o1, 2)
     c1.add_bond(c2)
@@ -157,7 +195,10 @@ if __name__ == '__main__':
 
     c2.add_pi_pond([c2, c3, c4, c5, c6, c7])
     print(c1.name, bin(c1.feature))
-    print(c1.feature)
+    print()
+    print(benzaldehyde.composition)
+    for i in benzaldehyde.composition:
+        print(i.name, benzaldehyde.composition[i], i)
     # for i in c1.bond_list:
     #     if type(i) is Element:
     #         print(i.name, i.feature, id(i))
