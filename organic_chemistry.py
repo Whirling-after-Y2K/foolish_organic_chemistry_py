@@ -106,7 +106,7 @@ class Atom:
         self.feature = 1 << MAX_FEATURE_NUM
         # self.feature += (element_id << MAX_FEATURE_NUM)
         self.feature |= HASH_FEATURE_TABLE[self.name]
-        self.overall_f = str(self.feature)
+        self.overall_f = ''
         self.belong = molecule
         molecule.composition[self] = self.feature
         # self.feature = 0b00000
@@ -116,14 +116,16 @@ class Atom:
 
         feature_name = self.name + "-" + str(connect_num) + target_atom.name
         add_feature(self, feature_name)
-        # update_feature(self, target_atom)
+        # 在对方还未进行update_overall_f前先将它储存在tmp_overall_f
+        tmp_overall_f = target_atom.overall_f
+        if is_first:
+            target_atom.add_bond(self, connect_num, False)
+        is_visited.clear()
+        update_overall_f(self, str(target_atom.feature)+tmp_overall_f)
 
         self.belong.composition[self] = self.feature
         for _ in range(connect_num):
             heap_add(self.bond_list, target_atom)
-
-        if is_first:
-            target_atom.add_bond(self, connect_num, False)
 
     # def __eq__(self, other):
     #     return self.feature == other.feature
@@ -158,17 +160,22 @@ def del_feature(atom: Atom, feature: str):
     atom.feature &= ~(1 << HASH_FEATURE_TABLE[feature])
 
 
-def update_feature(atom: Atom, target_atom: Atom):
-    is_used = []
-    for indirect_index in range(len(target_atom.bond_list)):
-        if target_atom.bond_list[indirect_index] is None:
+# update_feature用递归(dfs)实现从自己开始逐步修改所连原子的overall_f属性
+is_visited = []
+
+
+def update_overall_f(self: Atom, father_f: str):
+    global is_visited
+    self.overall_f += father_f
+    is_visited.append(self)
+    for son in self.bond_list:
+        if son is None:
             break
+        elif son in is_visited:
+            continue
         else:
-            if target_atom.bond_list[indirect_index] in is_used:
-                continue
-            target_atom.overall_f += update_feature(target_atom, target_atom.bond_list[indirect_index])
-            is_used.append(target_atom.bond_list[indirect_index])
-    return target_atom.overall_f
+            is_visited.append(son)
+            update_overall_f(son, str(self.feature) + self.overall_f)
 
 
 def connect(target_atom_list, is_cyclization=False):
