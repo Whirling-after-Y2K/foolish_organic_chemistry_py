@@ -38,24 +38,32 @@ del raw_feature_table
 print(MAX_FEATURE_NUM, HASH_FEATURE_TABLE)
 
 
-def heap_add(heap, value):
-    if heap[-1] is not None:
-        raise IndexError("list index out of range")
-    for i in range(len(heap)):
-        if type(heap[i]) is Atom:
-            if heap[i].overall_f > value.overall_f:
-                value, heap[i] = heap[i], value
-        elif type(heap[i]) is list:
-            value, heap[i] = heap[i], value
-        else:
-            heap[i] = value
-            return
+class Fheap:
+    def __init__(self, n):
+        self.heap = [None for _ in range(n)]
 
+    def add(self, value):
+        for i in range(len(self.heap)):
+            if type(self.heap[i]) is Atom:
+                if self.heap[i].overall_f > value.overall_f:
+                    value, self.heap[i] = self.heap[i], value
+            elif type(self.heap[i]) is list:
+                value, self.heap[i] = self.heap[i], value
+            else:
+                self.heap[i] = value
+                return
 
-def heap_add_pi(heap, value):
-    if heap[-1] is not None:
-        raise IndexError("list index out of range")
-    heap[heap.index(None)] = value
+    def add_pi(self, value):
+        self.heap[self.heap.index(None)] = value
+
+    def inquire_none(self):
+        try:
+            return self.heap.index(None)
+        except ValueError:
+            raise
+
+    def __iter__(self):
+        return iter(self.heap)
 
 
 class Molecule:
@@ -102,7 +110,7 @@ class Atom:
         #     raise OverflowError
         name = name.lower()
         self.name = name
-        self.bond_list = [None for _ in range(CHEMISTRY_BOND_DICT[name])]
+        self.bond_list = Fheap(CHEMISTRY_BOND_DICT[name])
         self.feature = 1 << MAX_FEATURE_NUM
         # self.feature += (element_id << MAX_FEATURE_NUM)
         self.feature |= HASH_FEATURE_TABLE[self.name]
@@ -117,22 +125,22 @@ class Atom:
         feature_name = self.name + "-" + str(connect_num) + target_atom.name
         add_feature(self, feature_name)
         # 在对方还未进行update_overall_f前先将它储存在tmp_overall_f
-        tmp_overall_f = target_atom.overall_f
+        # tmp_overall_f = target_atom.overall_f
         if is_first:
             target_atom.add_bond(self, connect_num, False)
-        is_visited.clear()
-        update_overall_f(self, str(target_atom.feature)+tmp_overall_f)
+        # is_visited.clear()
+        # update_overall_f(self, str(target_atom.feature) + tmp_overall_f)
 
         self.belong.composition[self] = self.feature
         for _ in range(connect_num):
-            heap_add(self.bond_list, target_atom)
+            self.bond_list.add(target_atom)
 
     # def __eq__(self, other):
     #     return self.feature == other.feature
 
     def add_pi_pond(self, target_atom_list: list, is_first=True):  # 注意target_element_list包含自身
         tmp_list: list = target_atom_list.copy()
-        heap_add_pi(self.bond_list, tmp_list)
+        self.bond_list.add_pi(tmp_list)
         if is_first:
             target_atom_list.remove(self)
             for target_atom in target_atom_list:
