@@ -36,28 +36,22 @@ del tmp_index
 del raw_feature_table
 
 
-# print(MAX_FEATURE_NUM, HASH_FEATURE_TABLE)
-
-
 class Molecule:
-    def __init__(self, name):
-        self.name = name
+    def __init__(self):
+        # self.name = name
         self.composition = []
         self.feature = []
         # self.feature_dict = {}
         # self.link_dict = {}
-        self.c_num = 0
-        self.o_num = 0
-        self.n_num = 0
+        # self.c_num = 0
+        # self.o_num = 0
+        # self.n_num = 0
 
     def __eq__(self, other):
         return self.feature == other.feature
 
     def __hash__(self):
         return hash(self.feature)
-
-    def update_name(self, new_name):
-        self.name = new_name
 
     def update(self):
         self.feature.clear()
@@ -148,7 +142,7 @@ def connect(target_atom_list, is_cyclization=False):
 
 
 if __name__ == '__main__':
-    benzaldehyde = Molecule("benzaldehyde")
+    benzaldehyde = Molecule()
     # benzaldehyde.add_atom('c', 7)
     # benzaldehyde.add_atom('o')
 
@@ -168,7 +162,7 @@ if __name__ == '__main__':
     c1.add_bond(c2)
     connect([c2, c3, c4, c5, c6, c7], True)
 
-    benzaldehyde1 = Molecule("benzaldehyde1")
+    benzaldehyde1 = Molecule()
     # benzaldehyde1.add_atom('c', 7)
     # benzaldehyde1.add_atom('o')
 
@@ -204,6 +198,8 @@ if __name__ == '__main__':
     for i in benzaldehyde.composition:
         print(i.name, i.feature, i.overall_f)
 
-    # print(c1.bond_list, c1)
-    # print(c2.bond_list, c2.name)
-
+    print(c1.bond_list, c1)
+    print(c2.bond_list, c2.name)
+    print()
+    data = json.dumps(benzaldehyde.feature)
+    print(data)
