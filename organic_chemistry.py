@@ -35,71 +35,92 @@ for i in raw_feature_table:
 
 del tmp_index
 del raw_feature_table
-print(MAX_FEATURE_NUM, HASH_FEATURE_TABLE)
 
 
+# print(MAX_FEATURE_NUM, HASH_FEATURE_TABLE)
+
+
+# Fheap是一个长度固定的列表,当调用前进行排序操作
 class Fheap:
     def __init__(self, n):
         self.heap = [None for _ in range(n)]
 
     def add(self, value):
-        for i in range(len(self.heap)):
-            if type(self.heap[i]) is Atom:
-                if self.heap[i].overall_f > value.overall_f:
-                    value, self.heap[i] = self.heap[i], value
-            elif type(self.heap[i]) is list:
-                value, self.heap[i] = self.heap[i], value
-            else:
-                self.heap[i] = value
-                return
-
-    def add_pi(self, value):
-        self.heap[self.heap.index(None)] = value
-
-    def inquire_none(self):
         try:
-            return self.heap.index(None)
+            none_index = self.heap.index(None)
         except ValueError:
             raise
+        else:
+            if type(value) is list:
+                self.heap[-1] = value
+            else:
+                self.heap[none_index] = value
+
+    def sort(self):
+        tmp = 0
+        if self.heap[0] is None:
+            return
+        for tmp1 in range(1, len(self.heap)):
+            if type(self.heap[tmp1]) is Atom:
+                if self.heap[tmp1].feature < self.heap[tmp].feature:
+                    self.heap[tmp1], self.heap[tmp] = self.heap[tmp], self.heap[tmp1]
+                    tmp = tmp1
 
     def __iter__(self):
+        # self.sort()
         return iter(self.heap)
+
+    def __str__(self):
+        # self.sort()
+        return str(self.heap)
 
 
 class Molecule:
     def __init__(self, name):
         self.name = name
         self.composition = {}
-        self.feature_dict = {}
+        self.feature = []
+        # self.feature_dict = {}
         self.link_dict = {}
         self.c_num = 0
         self.o_num = 0
         self.n_num = 0
 
+    def __eq__(self, other):
+        return self.feature == other.feature
+
     def update_name(self, new_name):
         self.name = new_name
 
-    def add_atom(self, atom_name, num=1):
-        atom_name = atom_name.lower()
+    # add_atom尚未使用
+    # def add_atom(self, atom_name, num=1):
+    #     atom_name = atom_name.lower()
+    #
+    #     match atom_name:
+    #         case "c":
+    #             atom_num = self.c_num
+    #             self.c_num += num
+    #         case "n":
+    #             atom_num = self.n_num
+    #             self.n_num += num
+    #         case "o":
+    #             atom_num = self.o_num
+    #             self.o_num += num
+    #         case _:
+    #             raise ValueError
+    #
+    #     for _ in range(num):
+    #         atom = Atom(atom_name, self)
+    #         self.composition[atom] = atom_name + str(atom_num)
+    #         self.feature_dict[atom_name + str(atom_num)] = atom.feature
+    #         atom_num += 1
 
-        match atom_name:
-            case "c":
-                atom_num = self.c_num
-                self.c_num += num
-            case "n":
-                atom_num = self.n_num
-                self.n_num += num
-            case "o":
-                atom_num = self.o_num
-                self.o_num += num
-            case _:
-                raise ValueError
-
-        for _ in range(num):
-            atom = Atom(atom_name, self)
-            self.composition[atom_name + str(atom_num)] = atom
-            self.feature_dict[atom_name + str(atom_num)] = atom.feature
-            atom_num += 1
+    def update(self):
+        self.feature.clear()
+        for atom in self.composition:
+            atom.overall_f = update_overall_f(atom)
+            self.feature.append(atom.overall_f)
+        self.feature.sort()
 
 
 class Atom:
@@ -140,7 +161,7 @@ class Atom:
 
     def add_pi_pond(self, target_atom_list: list, is_first=True):  # 注意target_element_list包含自身
         tmp_list: list = target_atom_list.copy()
-        self.bond_list.add_pi(tmp_list)
+        self.bond_list.add(tmp_list)
         if is_first:
             target_atom_list.remove(self)
             for target_atom in target_atom_list:
@@ -168,22 +189,42 @@ def del_feature(atom: Atom, feature: str):
     atom.feature &= ~(1 << HASH_FEATURE_TABLE[feature])
 
 
-# update_feature用递归(dfs)实现从自己开始逐步修改所连原子的overall_f属性
-is_visited = []
+# update_feature用递归(BFS)实现从自己开始逐步修改所连原子的overall_f属性
 
 
-def update_overall_f(self: Atom, father_f: str):
-    global is_visited
-    self.overall_f += father_f
-    is_visited.append(self)
-    for son in self.bond_list:
-        if son is None:
-            break
-        elif son in is_visited:
-            continue
-        else:
-            is_visited.append(son)
-            update_overall_f(son, str(self.feature) + self.overall_f)
+def update_overall_f(self):
+    visit_point = 0
+    will_visit = [self]
+    distant = 0
+    # self.overall_f += father_f
+    ansL = [str(distant) + str(self.feature)]
+
+    while visit_point < len(will_visit):
+        self = will_visit[visit_point]
+        distant = int(ansL[visit_point][0]) + 1
+        for fa in self.bond_list:
+            if (fa is None) or (fa in will_visit) or (type(fa) is list):
+                continue
+            else:
+                will_visit.append(fa)
+                ansL.append(str(distant) + str(fa.feature))
+        visit_point += 1
+    ansL.sort()
+    # is_visited.append(self)
+    # for father in self.bond_list:
+    #     if father is None:
+    #         continue
+    #     elif (father in is_visited) or (father in will_visit):
+    #         continue
+    #     elif type(father) is list:
+    #         continue
+    #     else:
+    #         will_visit.append(father)
+    # if visit_point < len(will_visit):
+    #     ans += update_overall_f(will_visit[visit_point])
+    #     visit_point += 1y
+
+    return '.'.join(ansL)
 
 
 def connect(target_atom_list, is_cyclization=False):
@@ -213,6 +254,31 @@ if __name__ == '__main__':
     c1.add_bond(o1, 2)
     c1.add_bond(c2)
     connect([c2, c3, c4, c5, c6, c7], True)
+
+    benzaldehyde1 = Molecule("benzaldehyde1")
+    # benzaldehyde1.add_atom('c', 7)
+    # benzaldehyde1.add_atom('o')
+
+    c11 = Atom("C", benzaldehyde1)
+    c21 = Atom("c", benzaldehyde1)
+    c31 = Atom("c", benzaldehyde1)
+    c41 = Atom("c", benzaldehyde1)
+    c51 = Atom("c", benzaldehyde1)
+    c611 = Atom("c", benzaldehyde1)
+    c71 = Atom("c", benzaldehyde1)
+    # c1-c7 o1 构成苯醛
+    o11 = Atom("o", benzaldehyde1)
+    # o2 = Atom("o", benzaldehyde1)
+    # o3 = Atom("o", benzaldehyde1)
+
+    c11.add_bond(o11, 2)
+    c11.add_bond(c21)
+    connect([c611, c41, c31, c51, c21, c71], True)
+
+    benzaldehyde.update()
+    benzaldehyde1.update()
+    print(benzaldehyde.feature)
+    print(bool(benzaldehyde == benzaldehyde1))
     for i in c1.bond_list:
         if i is None:
             continue
@@ -223,7 +289,7 @@ if __name__ == '__main__':
     print()
     print(benzaldehyde.composition)
     for i in benzaldehyde.composition:
-        print(i.name, benzaldehyde.composition[i], i)
+        print(i.name, benzaldehyde.composition[i], i.feature, i.overall_f)
     # for i in c1.bond_list:
     #     if type(i) is Element:
     #         print(i.name, i.feature, id(i))
