@@ -1,4 +1,5 @@
 import json
+import sys
 
 import organic_chemistry as oc
 
@@ -57,6 +58,11 @@ class Console:
             atom_list = [self.molecule_dict[self.current_name][atom_index] for atom_index in atom_index_list]
             oc.connect(atom_list, is_cyclization)
 
+    def connect_pi(self, atom_index_list):
+        atom1 = self.molecule_dict[self.current_name][atom_index_list[0]]
+        atom_list = [self.molecule_dict[self.current_name][atom_index] for atom_index in atom_index_list]
+        atom1.add_pi_bond(atom_list)
+
     def save(self):
         self.current_molecule.update()
 
@@ -66,7 +72,20 @@ class Console:
         with open(SAVE_PATH + '\\' + self.current_name + '.json', 'w') as f:
             f.write(data)
 
-    def run(self):
+    def load(self, file):
+        if file.split('.')[-1] != 'json':
+            print('Unsupported file formats')
+        with open(file, 'r') as f:
+            data = json.load(f)
+            data = data[0]
+            for i in data.split('.'):
+                feature = bin(int(i[1::]))[2::]
+                element_name = oc.HASH_FEATURE_TABLE[feature[-4::]]
+
+    def run(self, file=''):
+        if file != '':
+            f = open(file, 'r')
+            sys.stdin = f
         while True:
             user_input = input(f'{self.current_name}>').split(' ')
             command = user_input[0]
@@ -100,6 +119,9 @@ class Console:
                                 self.connect_atom(atom_index_list)
                         else:
                             self.connect_atom(atom_index_list)
+                    case 'c_pi' | 'connect_pi':
+                        atom_index_list = [int(atom_index) for atom_index in user_input[1].split(',')]
+                        self.connect_pi(atom_index_list)
                     case 'cm' | 'change_molecule':
                         self.change_molecule(user_input[1])
                     case 'print_name' | 'current':
@@ -121,22 +143,20 @@ class Console:
                             self.add_atom(user_input[1])
 
                     case 'save_log':
-                        with open('log.txt','w') as f:
+                        with open('log.txt', 'w') as f:
                             f.write(self.log)
+                            f.write('q\n')
 
                     case _:
                         print('wrong command')
             except IndexError:
                 print('wrong command')
                 raise
+        if file != '':
+            f.close()
 
 
 if __name__ == '__main__':
     # print(oc.data)
     a = Console()
     a.run()
-    # a.new_molecule("1")
-    # a.add_atom('c', 4)
-    # a.save()
-
-    # a.save_to_local()
