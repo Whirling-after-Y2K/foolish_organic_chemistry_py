@@ -4,8 +4,6 @@ CHEMISTRY_BOND_DICT = {'c': 4, 'o': 2, 'n': 3}
 HASH_FEATURE_TABLE = {}
 SAVE_NAME_NUM = 4
 MAX_FEATURE_NUM = SAVE_NAME_NUM  # 后4位用于储存self_name 元素名
-# MAX_ID_NUM = 11  # 第一位弃用,二到十二位用于储存element_id 最多容纳2^11-2个原子
-# element_id = -1
 
 with open("chemistry_feature.json", 'r', encoding='utf-8') as f:
     raw_feature_table = json.loads(f.read())
@@ -141,6 +139,8 @@ def connect(target_atom_list, is_cyclization=False):
         target_atom_list[0].add_bond(target_atom_list[-1])
 
 
+print(MAX_FEATURE_NUM, HASH_FEATURE_TABLE)
+
 if __name__ == '__main__':
     benzaldehyde = Molecule()
     # benzaldehyde.add_atom('c', 7)
@@ -158,9 +158,10 @@ if __name__ == '__main__':
     # o2 = Atom("o", benzaldehyde)
     # o3 = Atom("o", benzaldehyde)
 
-    c1.add_bond(o1, 2)
-    c1.add_bond(c2)
     connect([c2, c3, c4, c5, c6, c7], True)
+    c1.add_bond(c4)
+    c1.add_bond(o1)
+    c1.add_bond(o1)
 
     benzaldehyde1 = Molecule()
     # benzaldehyde1.add_atom('c', 7)
@@ -178,13 +179,15 @@ if __name__ == '__main__':
     # o2 = Atom("o", benzaldehyde1)
     # o3 = Atom("o", benzaldehyde1)
 
+    connect([c11, c21, c31, c41, c51, c611, c71])
+    c11.add_bond(c611)
     c11.add_bond(o11, 2)
-    c11.add_bond(c21)
-    connect([c611, c41, c31, c51, c21, c71], True)
 
     benzaldehyde.update()
     benzaldehyde1.update()
     print(benzaldehyde.feature)
+    print(benzaldehyde1.feature)
+    print()
     print(bool(benzaldehyde == benzaldehyde1))
     for i in c1.bond_list:
         if i is None:
