@@ -13,10 +13,9 @@ for i in raw_feature_table:
     if i == "comment":
         continue
     elif i == "self_name":
-
         tmp_index2 = 0
         for j in raw_feature_table[i]:
-            HASH_FEATURE_TABLE[j[0]] = tmp_index2  # tmp_index2用于为每一种名称编号 表示储存在后5位中该元素为tmp_index2
+            HASH_FEATURE_TABLE[j[0]] = tmp_index2  # tmp_index2用于为每一种名称编号 表示储存在后4位中该元素为tmp_index2
             HASH_FEATURE_TABLE[tmp_index2] = j[0]
             tmp_index2 += 1
         del tmp_index2
@@ -71,15 +70,22 @@ class Atom:
         molecule.composition.append(self)
 
     def add_bond(self, target_atom, connect_num=1, is_first=True):
-        feature_name = self.name + "-" + str(connect_num) + target_atom.name
+        if target_atom in self.bond_list:
+            feature_name = self.name + "-" + str(self.bond_list.count(target_atom)) + target_atom.name
+            del_feature(self, feature_name)
+            feature_name = self.name + "-" + str(self.bond_list.count(target_atom) + connect_num) + target_atom.name
+        else:
+            feature_name = self.name + "-" + str(connect_num) + target_atom.name
         add_feature(self, feature_name)
         if is_first:
             target_atom.add_bond(self, connect_num, False)
 
         add_point = self.bond_list.index(None)
+        # print(add_point)
         for _ in range(connect_num):
             self.bond_list[add_point] = target_atom
             add_point += 1
+            # print(add_point)
 
     def add_pi_pond(self, target_atom_list: list, is_first=True):  # 注意target_element_list包含自身
         tmp_list: list = target_atom_list.copy()
@@ -108,6 +114,28 @@ def add_feature(atom: Atom, feature: str):
 
 def del_feature(atom: Atom, feature: str):
     atom.feature &= ~(1 << HASH_FEATURE_TABLE[feature])
+
+
+def del_atom(self):
+    del_target = self
+    visit_point = 0
+    will_visit = [self]
+    while visit_point < len(will_visit):
+        self = will_visit[visit_point]
+        for connect_index in range(len(self.bond_list)):
+            if (self.bond_list[connect_index] is None) or (self.bond_list[connect_index] in will_visit):
+                pass
+            elif type(self.bond_list[connect_index]) is list:
+                if del_target in self.bond_list[connect_index]:
+                    del self.bond_list[connect_index]
+            else:
+                if self.bond_list[connect_index] is del_target:
+                    del self.bond_list[connect_index]
+                else:
+                    will_visit.append(self.bond_list[connect_index])
+
+        visit_point += 1
+    del del_target
 
 
 # update_overall_f函数,通过BFS实现从自己开始逐步获取所连原子的feature属性
@@ -142,6 +170,21 @@ def connect(target_atom_list, is_cyclization=False):
 print(MAX_FEATURE_NUM, HASH_FEATURE_TABLE)
 
 if __name__ == '__main__':
+    # a = Molecule()
+    # b = Molecule()
+    # c1 = Atom('c', a)
+    # c2 = Atom('c', a)
+    # c3 = Atom('c', b)
+    # c4 = Atom('c', b)
+    # c1.add_bond(c2, 2)
+    # c3.add_bond(c4)
+    # c3.add_bond(c4)
+    # a.update()
+    # b.update()
+    # print(a.feature)
+    # print(b.feature)
+    # print(a == b)
+
     benzaldehyde = Molecule()
     # benzaldehyde.add_atom('c', 7)
     # benzaldehyde.add_atom('o')
@@ -160,12 +203,11 @@ if __name__ == '__main__':
 
     connect([c2, c3, c4, c5, c6, c7], True)
     c1.add_bond(c4)
-    c1.add_bond(o1)
-    c1.add_bond(o1)
+    c1.add_bond(o1,2)
+    # c1.add_bond(o1)
+    # c1.add_bond(o1)
 
     benzaldehyde1 = Molecule()
-    # benzaldehyde1.add_atom('c', 7)
-    # benzaldehyde1.add_atom('o')
 
     c11 = Atom("C", benzaldehyde1)
     c21 = Atom("c", benzaldehyde1)
@@ -194,15 +236,15 @@ if __name__ == '__main__':
             continue
         print(i.overall_f)
 
-    c2.add_pi_pond([c2, c3, c4, c5, c6, c7])
-    print(c1.name, c1.overall_f)
-    print()
-    print(benzaldehyde.composition)
-    for i in benzaldehyde.composition:
-        print(i.name, i.feature, i.overall_f)
-
-    print(c1.bond_list, c1)
-    print(c2.bond_list, c2.name)
-    print()
-    data = json.dumps(benzaldehyde.feature)
-    print(data)
+    # c2.add_pi_pond([c2, c3, c4, c5, c6, c7])
+    # print(c1.name, c1.overall_f)
+    # print()
+    # print(benzaldehyde.composition)
+    # for i in benzaldehyde.composition:
+    #     print(i.name, i.feature, i.overall_f)
+    #
+    # print(c1.bond_list, c1)
+    # print(c2.bond_list, c2.name)
+    # print()
+    # data = json.dumps(benzaldehyde.feature)
+    # print(data)
