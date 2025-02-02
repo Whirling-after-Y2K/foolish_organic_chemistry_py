@@ -3,7 +3,7 @@ import json
 CHEMISTRY_BOND_DICT = {'c': 4, 'o': 2, 'n': 3}
 HASH_FEATURE_TABLE = {}
 SAVE_NAME_NUM = 4
-MAX_FEATURE_NUM = SAVE_NAME_NUM  # 后4位用于储存self_name 元素名
+MAX_FEATURE_NUM = SAVE_NAME_NUM  # 后4位用于储存self_name 元素名 最多16个
 
 with open("chemistry_feature.json", 'r', encoding='utf-8') as f:
     raw_feature_table = json.loads(f.read())
@@ -23,13 +23,18 @@ for i in raw_feature_table:
         tmp_index = SAVE_NAME_NUM
         tmp_feature_num = SAVE_NAME_NUM
         for j in raw_feature_table[i]:
-            tmp_feature_num += 1  # 每多一种特征就需要多一位进行储存,但不同元素的特征不可能共存 tmp_feature_num用于比较至少需要多少位进行储存
-            HASH_FEATURE_TABLE[j[0]] = tmp_index  # tmp_index用于为每一种特征编号 表示其储存在倒数第tmp_index+1位
-            tmp_index += 1
+            if '1' in j[0]:
+                HASH_FEATURE_TABLE[j[0]] = tmp_index  # 对于只占一个键位的特征 用三位进行储存 储存在倒数第tmp_index+1至倒数第tmp_index+3位
+                tmp_feature_num += 3
+                tmp_index += 3
+            else:
+                HASH_FEATURE_TABLE[j[0]] = tmp_index  # tmp_index用于为每一种特征编号 表示其储存在倒数第tmp_index+1位
+                tmp_feature_num += 1
+                tmp_index += 1
 
+        # 每多一种特征就需要多特定位进行储存,但不同元素的特征不可能共存 tmp_feature_num用于比较至少需要多少位进行储存
         MAX_FEATURE_NUM = max(tmp_feature_num - 1, MAX_FEATURE_NUM)
 
-MAX_FEATURE_NUM += 1  # 第二位用于存大π键
 del tmp_index
 del raw_feature_table
 
@@ -91,7 +96,15 @@ class Atom:
     def add_pi_pond(self, target_atom_list: list, is_first=True):  # 注意target_element_list包含自身
         tmp_list: list = target_atom_list.copy()
         self.bond_list[self.bond_list.index(None)] = tmp_list
-        self.feature |= (1 << (MAX_FEATURE_NUM-1))
+        f = True
+        for i in target_atom_list:
+            if i.name == 'c':
+                continue
+            else:
+                f = False
+                add_feature(self, 'no2-')
+        if f:
+            add_feature(self, 'c6-')
         if is_first:
             target_atom_list.remove(self)
             for target_atom in target_atom_list:
@@ -110,12 +123,22 @@ def inquire_feature(atom_feature: int, feature: str):
     return atom_feature & (1 << HASH_FEATURE_TABLE[feature])
 
 
+# def inquire_features(atom_feature: int, feature: str):
+#     return (atom_feature & (((1 << (HASH_FEATURE_TABLE[feature] + 3)) - 1) & (~((1 << HASH_FEATURE_TABLE[feature]) - 1)))) >> HASH_FEATURE_TABLE[feature]
+#
+
 def add_feature(atom: Atom, feature: str):
-    atom.feature |= (1 << HASH_FEATURE_TABLE[feature])
+    if '1' in feature:
+        atom.feature += (1 << HASH_FEATURE_TABLE[feature])
+    else:
+        atom.feature |= (1 << HASH_FEATURE_TABLE[feature])
 
 
 def del_feature(atom: Atom, feature: str):
-    atom.feature &= ~(1 << HASH_FEATURE_TABLE[feature])
+    if '1' in feature:
+        atom.feature -= (1 << HASH_FEATURE_TABLE[feature])
+    else:
+        atom.feature &= ~(1 << HASH_FEATURE_TABLE[feature])
 
 
 def del_atom(self):

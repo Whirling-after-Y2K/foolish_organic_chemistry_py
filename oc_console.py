@@ -6,6 +6,16 @@ import organic_chemistry as oc
 SAVE_PATH = "molecules"
 
 
+def load(file):
+    if file.split('.')[-1] != 'data':
+        print('Unsupported file formats')
+
+    local = open(file, 'r')
+    sys.stdin = local
+    input()
+    print(sys.stdin)
+
+
 class Console:
     def __init__(self):
         self.molecule_dict = {}
@@ -69,20 +79,28 @@ class Console:
     def save_to_local(self):
         self.save()
         data = json.dumps(self.current_molecule.feature)
-        with open(SAVE_PATH + '\\' + self.current_name + '.json', 'w') as f:
+        with open(SAVE_PATH + '\\' + self.current_name + '.data', 'w') as f:
             f.write(data)
-
-    def load(self, file):
-        if file.split('.')[-1] != 'json':
-            print('Unsupported file formats')
-        with open(file, 'r') as f:
-            data = json.load(f)
-            data = data[0]
-            for i in data.split('.'):
-                feature = bin(int(i[1::]))[2::]
-                element_name = oc.HASH_FEATURE_TABLE[feature[-4::]]
+            f.write('\n')
+            f.write(f'nm {self.current_name}\n')
+            for atom_index in range(1, len(self.molecule_dict[self.current_name])):
+                atom = self.molecule_dict[self.current_name][atom_index]
+                f.write(f'a {atom.name}\n')
+            is_visited = []
+            for atom_index in range(1, len(self.molecule_dict[self.current_name])):
+                atom = self.molecule_dict[self.current_name][atom_index]
+                is_visited.append(atom_index)
+                for connect in atom.bond_list:
+                    if connect is None:
+                        break
+                    if self.molecule_dict[self.current_name].index(connect) in is_visited:
+                        continue
+                    f.write(f'c {atom_index},{self.molecule_dict[self.current_name].index(connect)}\n')
+            f.write('save\n')
+            f.write('end\n')
 
     def run(self, file=''):
+        console_in = sys.stdin
         if file != '':
             f = open(file, 'r')
             sys.stdin = f
@@ -141,19 +159,22 @@ class Console:
                             self.add_atom(user_input[1], int(user_input[2]))
                         else:
                             self.add_atom(user_input[1])
-
                     case 'save_log':
                         with open('log.txt', 'w') as f:
                             f.write(self.log)
                             f.write('q\n')
-
+                    case 'end':
+                        sys.stdin = orginal_in
+                        # f.close()
+                    case 'load':
+                        orginal_in = sys.stdin
+                        load(user_input[-1])
+                        # sys.stdin = orginal_in
                     case _:
                         print('wrong command')
             except IndexError:
                 print('wrong command')
                 raise
-        if file != '':
-            f.close()
 
 
 if __name__ == '__main__':
