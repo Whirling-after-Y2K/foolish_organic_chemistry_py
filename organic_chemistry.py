@@ -50,12 +50,6 @@ class Molecule:
         # self.o_num = 0
         # self.n_num = 0
 
-    def __eq__(self, other):
-        return self.feature == other.feature
-
-    def __hash__(self):
-        return hash(self.feature)
-
     def update(self):
         self.feature.clear()
         for atom in self.composition:
@@ -93,7 +87,7 @@ class Atom:
             add_point += 1
             # print(add_point)
 
-    def add_pi_pond(self, target_atom_list: list, is_first=True):  # 注意target_element_list包含自身
+    def add_pi_bond(self, target_atom_list: list, is_first=True):  # 注意target_element_list包含自身
         tmp_list: list = target_atom_list.copy()
         self.bond_list[self.bond_list.index(None)] = tmp_list
         f = True
@@ -108,7 +102,7 @@ class Atom:
         if is_first:
             target_atom_list.remove(self)
             for target_atom in target_atom_list:
-                target_atom.add_pi_pond(tmp_list, False)
+                target_atom.add_pi_bond(tmp_list, False)
 
 
 '''
@@ -254,13 +248,13 @@ if __name__ == '__main__':
     print(benzaldehyde.feature)
     print(benzaldehyde1.feature)
     print()
-    print(bool(benzaldehyde == benzaldehyde1))
+    print(bool(benzaldehyde.feature == benzaldehyde1.feature))
     for i in c1.bond_list:
         if i is None:
             continue
         print(i.overall_f)
 
-    c2.add_pi_pond([c2, c3, c4, c5, c6, c7])
+    c2.add_pi_bond([c2, c3, c4, c5, c6, c7])
     print(c1.name, c1.overall_f)
     print()
     print(benzaldehyde.composition)

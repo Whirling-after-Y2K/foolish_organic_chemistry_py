@@ -6,16 +6,6 @@ import organic_chemistry as oc
 SAVE_PATH = "molecules"
 
 
-def load(file):
-    if file.split('.')[-1] != 'data':
-        print('Unsupported file formats')
-
-    local = open(file, 'r')
-    sys.stdin = local
-    input()
-    print(sys.stdin)
-
-
 class Console:
     def __init__(self):
         self.molecule_dict = {}
@@ -38,16 +28,22 @@ class Console:
         else:
             print("此名称不存在")
 
-    def rename(self, original_name, new_name):
+    def rename(self, new_name):
         if new_name in self.molecule_dict:
             print("此名称已被占用")
         else:
+            original_name = self.current_name
             self.molecule_dict[new_name] = self.molecule_dict[original_name]
+            self.current_name = new_name
             del self.molecule_dict[original_name]
 
     def add_atom(self, atom_name, num=1):
         for _ in range(num):
             self.molecule_dict[self.current_name].append(oc.Atom(atom_name, self.current_molecule))
+
+    def list_molecule(self):
+        for i in self.molecule_dict:
+            print(i)
 
     def list_atoms(self):
         for atom_index in range(1, len(self.molecule_dict[self.current_name])):
@@ -57,6 +53,12 @@ class Console:
             for connect in atom.bond_list:
                 if connect is None:
                     break
+                if type(connect) is list:
+                    print('\tpi:')
+                    for i in connect:
+                        print(f"\t-{i.name} index:{self.molecule_dict[self.current_name].index(i)}", end=' ')
+                    print()
+                    continue
                 print(f"\t-{connect.name} index:{self.molecule_dict[self.current_name].index(connect)}")
 
     def connect_atom(self, atom_index_list, is_cyclization=False, num=1):
@@ -73,13 +75,24 @@ class Console:
         atom_list = [self.molecule_dict[self.current_name][atom_index] for atom_index in atom_index_list]
         atom1.add_pi_bond(atom_list)
 
+    def load(self, file):
+        if file.split('.')[-1] != 'txt':
+            print('Unsupported file formats')
+
+        local = open(file, 'r', encoding='gbk')
+        sys.stdin = local
+        if self.current_name is not None:
+            input()
+        input()
+        print(sys.stdin)
+
     def save(self):
         self.current_molecule.update()
 
     def save_to_local(self):
         self.save()
         data = json.dumps(self.current_molecule.feature)
-        with open(SAVE_PATH + '\\' + self.current_name + '.data', 'w') as f:
+        with open(SAVE_PATH + '\\' + self.current_name + '.txt', 'w', encoding='utf-8') as f:
             f.write(data)
             f.write('\n')
             f.write(f'nm {self.current_name}\n')
@@ -90,19 +103,27 @@ class Console:
             for atom_index in range(1, len(self.molecule_dict[self.current_name])):
                 atom = self.molecule_dict[self.current_name][atom_index]
                 is_visited.append(atom_index)
+                pi = False
                 for connect in atom.bond_list:
                     if connect is None:
                         break
+                    if type(connect) is list:
+                        pi = connect
+                        continue
                     if self.molecule_dict[self.current_name].index(connect) in is_visited:
                         continue
                     f.write(f'c {atom_index},{self.molecule_dict[self.current_name].index(connect)}\n')
+            if pi:
+                tmp_pi = [str(self.molecule_dict[self.current_name].index(i)) for i in pi]
+                print(','.join(tmp_pi))
+                f.write('c_pi ' + ','.join(tmp_pi)+'\n')
             f.write('save\n')
             f.write('end\n')
 
     def run(self, file=''):
         console_in = sys.stdin
         if file != '':
-            f = open(file, 'r')
+            f = open(file, 'r', encoding='utf-8')
             sys.stdin = f
         while True:
             user_input = input(f'{self.current_name}>').split(' ')
@@ -146,11 +167,10 @@ class Console:
                         print(self.current_name)
                     case 'la' | 'list' | 'list_atoms':
                         self.list_atoms()
+                    case 'lm' | 'list_molecule':
+                        self.list_molecule()
                     case 'rn' | 'rename':
-                        if len(user_input) == 3:
-                            self.rename(user_input[1], user_input[2])
-                        else:
-                            self.rename(self.current_name, user_input[1])
+                        self.rename(user_input[1])
                     case 'nm' | 'new_molecule':
                         self.new_molecule(user_input[1])
 
@@ -168,7 +188,7 @@ class Console:
                         # f.close()
                     case 'load':
                         orginal_in = sys.stdin
-                        load(user_input[-1])
+                        self.load(user_input[-1])
                         # sys.stdin = orginal_in
                     case _:
                         print('wrong command')
