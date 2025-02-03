@@ -41,6 +41,12 @@ class Console:
         for _ in range(num):
             self.molecule_dict[self.current_name].append(oc.Atom(atom_name, self.current_molecule))
 
+    def del_atom(self, atom_index):
+        oc.del_atom(self.molecule_dict[self.current_name][atom_index])
+        # print(self.molecule_dict[self.current_name])
+        del self.molecule_dict[self.current_name][atom_index]
+        # print(self.molecule_dict[self.current_name])
+
     def list_molecule(self):
         for i in self.molecule_dict:
             print(i)
@@ -52,8 +58,9 @@ class Console:
             print(f'{atom.name}:')
             for connect in atom.bond_list:
                 if connect is None:
-                    break
+                    continue
                 if type(connect) is list:
+                    # print(connect)
                     print('\tpi:')
                     for i in connect:
                         print(f"\t-{i.name} index:{self.molecule_dict[self.current_name].index(i)}", end=' ')
@@ -84,7 +91,7 @@ class Console:
         if self.current_name is not None:
             input()
         input()
-        print(sys.stdin)
+        # print(sys.stdin)
 
     def save(self):
         self.current_molecule.update()
@@ -116,14 +123,14 @@ class Console:
             if pi:
                 tmp_pi = [str(self.molecule_dict[self.current_name].index(i)) for i in pi]
                 print(','.join(tmp_pi))
-                f.write('c_pi ' + ','.join(tmp_pi)+'\n')
+                f.write('c_pi ' + ','.join(tmp_pi) + '\n')
             f.write('save\n')
             f.write('end\n')
 
     def run(self, file=''):
         console_in = sys.stdin
         if file != '':
-            f = open(file, 'r', encoding='utf-8')
+            f = open(file, 'r', encoding='gbk')
             sys.stdin = f
         while True:
             user_input = input(f'{self.current_name}>').split(' ')
@@ -179,15 +186,19 @@ class Console:
                             self.add_atom(user_input[1], int(user_input[2]))
                         else:
                             self.add_atom(user_input[1])
+                    case 'd' | 'del':
+                        self.del_atom(int(user_input[-1]))
                     case 'save_log':
                         with open('log.txt', 'w') as f:
                             f.write(self.log)
                             f.write('q\n')
-                    case 'end':
-                        sys.stdin = orginal_in
+                    case 'end_of_load':
+                        sys.stdin = original_in
                         # f.close()
+                    case 'end':
+                        sys.stdin = console_in
                     case 'load':
-                        orginal_in = sys.stdin
+                        original_in = sys.stdin
                         self.load(user_input[-1])
                         # sys.stdin = orginal_in
                     case _:
@@ -200,4 +211,4 @@ class Console:
 if __name__ == '__main__':
     # print(oc.data)
     a = Console()
-    a.run()
+    a.run('log.txt')

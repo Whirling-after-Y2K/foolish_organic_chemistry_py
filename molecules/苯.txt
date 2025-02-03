@@ -14,4 +14,4 @@ c 4,5
 c 5,6
 c_pi 1,2,3,4,5,6
 save
-end
+end_of_load

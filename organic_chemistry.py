@@ -122,17 +122,11 @@ def inquire_feature(atom_feature: int, feature: str):
 #
 
 def add_feature(atom: Atom, feature: str):
-    if '1' in feature:
-        atom.feature += (1 << HASH_FEATURE_TABLE[feature])
-    else:
-        atom.feature |= (1 << HASH_FEATURE_TABLE[feature])
+    atom.feature += (1 << HASH_FEATURE_TABLE[feature])
 
 
 def del_feature(atom: Atom, feature: str):
-    if '1' in feature:
-        atom.feature -= (1 << HASH_FEATURE_TABLE[feature])
-    else:
-        atom.feature &= ~(1 << HASH_FEATURE_TABLE[feature])
+    atom.feature -= (1 << HASH_FEATURE_TABLE[feature])
 
 
 def del_atom(self):
@@ -141,17 +135,23 @@ def del_atom(self):
     will_visit = [self]
     while visit_point < len(will_visit):
         self = will_visit[visit_point]
+        if self.bond_list.count(del_target) >= 1:
+            feature_name = self.name + "-" + str(self.bond_list.count(del_target)) + del_target.name
+            del_feature(self, feature_name)
+            while self.bond_list.count(del_target) >= 1:
+                self.bond_list[self.bond_list.index(del_target)] = None
         for connect_index in range(len(self.bond_list)):
             if (self.bond_list[connect_index] is None) or (self.bond_list[connect_index] in will_visit):
-                pass
+                continue
             elif type(self.bond_list[connect_index]) is list:
                 if del_target in self.bond_list[connect_index]:
-                    del self.bond_list[connect_index]
+                    if del_target.name == 'c':
+                        del_feature(self, 'c6-')
+                    else:
+                        del_feature(self, 'no2-')
+                    self.bond_list[connect_index] = None
             else:
-                if self.bond_list[connect_index] is del_target:
-                    del self.bond_list[connect_index]
-                else:
-                    will_visit.append(self.bond_list[connect_index])
+                will_visit.append(self.bond_list[connect_index])
 
         visit_point += 1
     del del_target
