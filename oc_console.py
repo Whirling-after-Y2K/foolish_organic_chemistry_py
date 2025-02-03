@@ -37,6 +37,9 @@ class Console:
             self.current_name = new_name
             del self.molecule_dict[original_name]
 
+    def is_equal(self, name1, name2):
+        return self.molecule_dict[name1][0].feature == self.molecule_dict[name2][0].feature
+
     def add_atom(self, atom_name, num=1):
         for _ in range(num):
             self.molecule_dict[self.current_name].append(oc.Atom(atom_name, self.current_molecule))
@@ -86,7 +89,7 @@ class Console:
         if file.split('.')[-1] != 'txt':
             print('Unsupported file formats')
 
-        local = open(file, 'r', encoding='gbk')
+        local = open(file, 'r', encoding='utf-8')
         sys.stdin = local
         if self.current_name is not None:
             input()
@@ -122,7 +125,7 @@ class Console:
                     f.write(f'c {atom_index},{self.molecule_dict[self.current_name].index(connect)}\n')
             if pi:
                 tmp_pi = [str(self.molecule_dict[self.current_name].index(i)) for i in pi]
-                print(','.join(tmp_pi))
+                # print(','.join(tmp_pi))
                 f.write('c_pi ' + ','.join(tmp_pi) + '\n')
             f.write('save\n')
             f.write('end\n')
@@ -201,6 +204,11 @@ class Console:
                         original_in = sys.stdin
                         self.load(user_input[-1])
                         # sys.stdin = orginal_in
+                    case '==' | 'is_equal':
+                        if self.is_equal(user_input[1], user_input[2]):
+                            print('True')
+                        else:
+                            print('False')
                     case _:
                         print('wrong command')
             except IndexError:
@@ -211,4 +219,5 @@ class Console:
 if __name__ == '__main__':
     # print(oc.data)
     a = Console()
-    a.run('log.txt')
+    # a.run('log.txt')
+    a.run()
