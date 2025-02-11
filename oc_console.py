@@ -60,16 +60,16 @@ class Console:
             print(f'index:{atom_index}', end='\t')
             print(f'{atom.name}:')
             for connect in atom.bond_list:
-                if connect is None:
-                    continue
-                if type(connect) is list:
+                if type(connect) is str:
+                    print(connect)
+                elif type(connect) is list:
                     # print(connect)
                     print('\tpi:')
                     for i in connect:
                         print(f"\t-{i.name} index:{self.molecule_dict[self.current_name].index(i)}", end=' ')
                     print()
-                    continue
-                print(f"\t-{connect.name} index:{self.molecule_dict[self.current_name].index(connect)}")
+                else:
+                    print(f"\t-{connect.name} index:{self.molecule_dict[self.current_name].index(connect)}")
 
     def connect_atom(self, atom_index_list, is_cyclization=False, num=1):
         if len(atom_index_list) == 2:
@@ -115,18 +115,20 @@ class Console:
                 is_visited.append(atom_index)
                 pi = False
                 for connect in atom.bond_list:
-                    if connect is None:
-                        break
-                    if type(connect) is list:
+                    if type(connect) is str:
+                        continue
+                    elif type(connect) is list:
+                        is_visited.append(connect)
                         pi = connect
                         continue
-                    if self.molecule_dict[self.current_name].index(connect) in is_visited:
+                    elif self.molecule_dict[self.current_name].index(connect) in is_visited:
                         continue
-                    f.write(f'c {atom_index},{self.molecule_dict[self.current_name].index(connect)}\n')
-            if pi:
-                tmp_pi = [str(self.molecule_dict[self.current_name].index(i)) for i in pi]
-                # print(','.join(tmp_pi))
-                f.write('c_pi ' + ','.join(tmp_pi) + '\n')
+                    else:
+                        f.write(f'c {atom_index},{self.molecule_dict[self.current_name].index(connect)}\n')
+                if pi and pi not in is_visited:
+                    tmp_pi = [str(self.molecule_dict[self.current_name].index(i)) for i in pi]
+                    # print(','.join(tmp_pi))
+                    f.write('c_pi ' + ','.join(tmp_pi) + '\n')
             f.write('save\n')
             f.write('end\n')
 
