@@ -1,43 +1,63 @@
-import json
+# import json
 
-CHEMISTRY_BOND_DICT = {'c': 4, 'o': 2, 'n': 3}
+# -------初始化
+
+HASH_NAME_TABLE = {}
 HASH_FEATURE_TABLE = {}
-SAVE_NAME_NUM = 4
-MAX_FEATURE_NUM = SAVE_NAME_NUM  # 后4位用于储存self_name 元素名 最多16个
 
-with open("chemistry_feature.json", 'r', encoding='utf-8') as f:
-    raw_feature_table = json.loads(f.read())
-del f
+SAVE_NAME_NUM = 3  # 后3位用于储存self_name 元素名 最多8个
+# SAVE_FEATURE_NUM = 1  # 用SAVE_FEATURE_NUM位储存特征的数量
+# MAX_FEATURE_NUM = SAVE_NAME_NUM
 
-for i in raw_feature_table:
-    if i == "comment":
+# with open("chemistry_feature.json", 'r', encoding='utf-8') as f:
+#     raw_feature_table = json.loads(f.read())
+# del f
+
+# del raw_feature_table
+CHEMISTRY_BOND_DICT = {"c": 4, "n": 3, "o": 2}
+IGNORE_ELEMENT_LIST = ["h", "f", "cl", "br", "i"]
+
+tmp_index1 = 0
+for i in CHEMISTRY_BOND_DICT:
+    HASH_NAME_TABLE[i] = tmp_index1  # tmp_index1用于为每一种可计算元素编号 表示储存在后SAVE_NAME_NUM位中该元素为tmp_index1
+    HASH_NAME_TABLE[tmp_index1] = i
+    tmp_index1 += 1
+
+tmp_index1 = SAVE_NAME_NUM
+HASH_FEATURE_TABLE['-1h'] = tmp_index1
+tmp_index1 += 2  # 特殊用两位储存-h的数量
+# 对于一个特征 用1位进行储存 储存在倒数第tmp_index+1位
+for i in CHEMISTRY_BOND_DICT:
+    feature_name = '-1' + i
+    HASH_FEATURE_TABLE[feature_name] = tmp_index1
+    tmp_index1 += 1
+
+    feature_name = '-2' + i
+    HASH_FEATURE_TABLE[feature_name] = tmp_index1
+    tmp_index1 += 1
+
+    if CHEMISTRY_BOND_DICT[i] >= 3:
+        feature_name = '-3' + i
+        HASH_FEATURE_TABLE[feature_name] = tmp_index1
+        tmp_index1 += 1
+
+for i in IGNORE_ELEMENT_LIST:
+    if i == 'h':
         continue
-    elif i == "self_name":
-        tmp_index2 = 0
-        for j in raw_feature_table[i]:
-            HASH_FEATURE_TABLE[j[0]] = tmp_index2  # tmp_index2用于为每一种名称编号 表示储存在后4位中该元素为tmp_index2
-            HASH_FEATURE_TABLE[tmp_index2] = j[0]
-            tmp_index2 += 1
-        del tmp_index2
-    else:
-        tmp_index = SAVE_NAME_NUM
-        tmp_feature_num = SAVE_NAME_NUM
-        for j in raw_feature_table[i]:
-            if '1' in j[0]:
-                HASH_FEATURE_TABLE[j[0]] = tmp_index  # 对于只占一个键位的特征 用三位进行储存 储存在倒数第tmp_index+1至倒数第tmp_index+3位
-                tmp_feature_num += 3
-                tmp_index += 3
-            else:
-                HASH_FEATURE_TABLE[j[0]] = tmp_index  # tmp_index用于为每一种特征编号 表示其储存在倒数第tmp_index+1位
-                tmp_feature_num += 1
-                tmp_index += 1
+    feature_name = '-1' + i
+    HASH_FEATURE_TABLE[feature_name] = tmp_index1
+    tmp_index1 += 1
 
-        # 每多一种特征就需要多特定位进行储存,但不同元素的特征不可能共存 tmp_feature_num用于比较至少需要多少位进行储存
-        MAX_FEATURE_NUM = max(tmp_feature_num - 1, MAX_FEATURE_NUM)
+HASH_FEATURE_TABLE['c6-'] = tmp_index1
+tmp_index1 += 1
+HASH_FEATURE_TABLE['no2-'] = tmp_index1
+del tmp_index1
 
-del tmp_index
-del raw_feature_table
+# 每一种特征就需要多特定位进行储存
+MAX_FEATURE_NUM = len(HASH_FEATURE_TABLE) + (len(HASH_NAME_TABLE) >> 1)
 
+
+# -------
 
 class Molecule:
     def __init__(self):
@@ -62,47 +82,74 @@ class Atom:
     def __init__(self, name: str, molecule: Molecule):
         name = name.lower()
         self.name = name
-        self.bond_list = [None for _ in range(CHEMISTRY_BOND_DICT[name])]
+        self.bond_list = ['-1h' for _ in range(CHEMISTRY_BOND_DICT[name])]
         self.feature = 1 << MAX_FEATURE_NUM
-        self.feature |= HASH_FEATURE_TABLE[self.name]
+        self.feature |= HASH_NAME_TABLE[self.name]
         self.overall_f = ''
         self.belong = molecule
         molecule.composition.append(self)
 
-    def add_bond(self, target_atom, connect_num=1, is_first=True):
-        if target_atom in self.bond_list:
-            feature_name = self.name + "-" + str(self.bond_list.count(target_atom)) + target_atom.name
-            del_feature(self, feature_name)
-            feature_name = self.name + "-" + str(self.bond_list.count(target_atom) + connect_num) + target_atom.name
-        else:
-            feature_name = self.name + "-" + str(connect_num) + target_atom.name
-        add_feature(self, feature_name)
-        if is_first:
-            target_atom.add_bond(self, connect_num, False)
 
-        add_point = self.bond_list.index(None)
-        # print(add_point)
-        for _ in range(connect_num):
-            self.bond_list[add_point] = target_atom
-            add_point += 1
-            # print(add_point)
+def add_bond(target_atom0, target_atom1, connect_num=1):
+    connected_num = target_atom0.bond_list.count(target_atom1)
+    if connected_num > 0:
+        feature_name = "-" + str(connected_num) + target_atom1.name
+        del_feature(target_atom0, feature_name)
+        feature_name = "-" + str(connected_num + connect_num) + target_atom1.name
+    else:
+        feature_name = "-" + str(connect_num) + target_atom1.name
+    add_feature(target_atom0, feature_name)
+    # print(add_point)
+    for _ in range(connect_num):
+        add_point = target_atom0.bond_list.index('-1h')
+        target_atom0.bond_list[add_point] = target_atom1
 
-    def add_pi_bond(self, target_atom_list: list, is_first=True):  # 注意target_element_list包含自身
-        tmp_list: list = target_atom_list.copy()
-        self.bond_list[self.bond_list.index(None)] = tmp_list
-        f = True
-        for i in target_atom_list:
-            if i.name == 'c':
-                continue
-            else:
-                f = False
-                add_feature(self, 'no2-')
-        if f:
-            add_feature(self, 'c6-')
-        if is_first:
-            target_atom_list.remove(self)
-            for target_atom in target_atom_list:
-                target_atom.add_pi_bond(tmp_list, False)
+    target_atom0, target_atom1 = target_atom1, target_atom0
+
+    connected_num = target_atom0.bond_list.count(target_atom1)
+    if connected_num > 0:
+        feature_name = "-" + str(connected_num) + target_atom1.name
+        del_feature(target_atom0, feature_name)
+        feature_name = "-" + str(connected_num + connect_num) + target_atom1.name
+    else:
+        feature_name = "-" + str(connect_num) + target_atom1.name
+    add_feature(target_atom0, feature_name)
+    # print(add_point)
+    for _ in range(connect_num):
+        add_point = target_atom0.bond_list.index('-1h')
+        target_atom0.bond_list[add_point] = target_atom1
+        # add_point += 1
+
+
+def break_bond(target_atom0, target_atom1, single=False):
+    while target_atom1 in target_atom0.bond_list:
+        del_target_index = target_atom0.bond_list.index(target_atom1)
+        target_atom0.bond_list[del_target_index] = '-1h'
+        if single:
+            break
+    target_atom0, target_atom1 = target_atom1, target_atom0
+    while target_atom1 in target_atom0.bond_list:
+        del_target_index = target_atom0.bond_list.index(target_atom1)
+        target_atom0.bond_list[del_target_index] = '-1h'
+        if single:
+            break
+
+
+def add_pi_bond(target_atom_list: list):
+    if any(i.name == 'c' for i in target_atom_list):
+        feature_name = 'c6-'
+    else:
+        feature_name = 'no2-'
+    for target_atom in target_atom_list:
+        add_point = target_atom.bond_list.index('-1h')
+        add_feature(target_atom, feature_name)
+        target_atom.bond_list[add_point] = target_atom_list
+
+
+def break_pi_bond(target_atom_list: list):
+    for target_atom in target_atom_list:
+        del_index = target_atom.bond_list.index(target_atom_list)
+        target_atom.bond_list[del_index] = '-1h'
 
 
 '''
@@ -122,11 +169,11 @@ def inquire_feature(atom_feature: int, feature: str):
 #
 
 def add_feature(atom: Atom, feature: str):
-    atom.feature += (1 << HASH_FEATURE_TABLE[feature])
+    atom.feature |= (1 << HASH_FEATURE_TABLE[feature])
 
 
 def del_feature(atom: Atom, feature: str):
-    atom.feature -= (1 << HASH_FEATURE_TABLE[feature])
+    atom.feature &= ~(1 << HASH_FEATURE_TABLE[feature])
 
 
 def del_atom(self):
@@ -136,12 +183,12 @@ def del_atom(self):
     while visit_point < len(will_visit):
         self = will_visit[visit_point]
         if self.bond_list.count(del_target) >= 1:
-            feature_name = self.name + "-" + str(self.bond_list.count(del_target)) + del_target.name
+            feature_name = "-" + str(self.bond_list.count(del_target)) + del_target.name
             del_feature(self, feature_name)
             while self.bond_list.count(del_target) >= 1:
-                self.bond_list[self.bond_list.index(del_target)] = None
+                self.bond_list[self.bond_list.index(del_target)] = '-1h'
         for connect_index in range(len(self.bond_list)):
-            if (self.bond_list[connect_index] is None) or (self.bond_list[connect_index] in will_visit):
+            if (self.bond_list[connect_index] == '-1h') or (self.bond_list[connect_index] in will_visit):
                 continue
             elif type(self.bond_list[connect_index]) is list:
                 if del_target in self.bond_list[connect_index]:
@@ -149,7 +196,7 @@ def del_atom(self):
                         del_feature(self, 'c6-')
                     else:
                         del_feature(self, 'no2-')
-                    self.bond_list[connect_index] = None
+                    self.bond_list[connect_index] = '-1h'
             else:
                 will_visit.append(self.bond_list[connect_index])
 
@@ -169,7 +216,7 @@ def update_overall_f(self):
         self = will_visit[visit_point]
         distant = int(ansL[visit_point][0]) + 1
         for fa in self.bond_list:
-            if (fa is None) or (fa in will_visit) or (type(fa) is list):
+            if (fa == '-1h') or (fa in will_visit) or (type(fa) is list):
                 continue
             else:
                 will_visit.append(fa)
@@ -181,9 +228,9 @@ def update_overall_f(self):
 
 def connect(target_atom_list, is_cyclization=False):
     for tmp in range(len(target_atom_list) - 1):
-        target_atom_list[tmp].add_bond(target_atom_list[tmp + 1])
+        add_bond(target_atom_list[tmp], target_atom_list[tmp + 1])
     if is_cyclization:
-        target_atom_list[0].add_bond(target_atom_list[-1])
+        add_bond(target_atom_list[0], target_atom_list[-1])
 
 
 if __name__ == '__main__':
@@ -220,8 +267,8 @@ if __name__ == '__main__':
     # o3 = Atom("o", benzaldehyde)
 
     connect([c2, c3, c4, c5, c6, c7], True)
-    c1.add_bond(c4)
-    c1.add_bond(o1, 2)
+    add_bond(c1, c4)
+    add_bond(c1, o1, 2)
     # c1.add_bond(o1)
     # c1.add_bond(o1)
 
@@ -240,8 +287,8 @@ if __name__ == '__main__':
     # o3 = Atom("o", benzaldehyde1)
 
     connect([c11, c21, c31, c41, c51, c611, c71])
-    c11.add_bond(c611)
-    c71.add_bond(o11, 2)
+    add_bond(c11, c611)
+    add_bond(c71, o11, 2)
 
     benzaldehyde.update()
     benzaldehyde1.update()
@@ -250,11 +297,11 @@ if __name__ == '__main__':
     print()
     print(bool(benzaldehyde.feature == benzaldehyde1.feature))
     for i in c1.bond_list:
-        if i is None:
+        if i == '-1h':
             continue
         print(i.overall_f)
 
-    c2.add_pi_bond([c2, c3, c4, c5, c6, c7])
+    add_pi_bond([c2, c3, c4, c5, c6, c7])
     print(c1.name, c1.overall_f)
     print()
     print(benzaldehyde.composition)
@@ -264,5 +311,5 @@ if __name__ == '__main__':
     print(c1.bond_list, c1)
     print(c2.bond_list, c2.name)
     print()
-    data = json.dumps(benzaldehyde.feature)
-    print(data)
+    # data = json.dumps(benzaldehyde.feature)
+    # print(data)
