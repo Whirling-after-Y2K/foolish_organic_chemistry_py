@@ -64,6 +64,7 @@ class Molecule:
         # self.name = name
         self.composition = []
         self.feature = []
+        self.unsaturation = 0
         # self.feature_dict = {}
         # self.link_dict = {}
         # self.c_num = 0
@@ -89,20 +90,31 @@ class Atom:
         self.belong = molecule
         molecule.composition.append(self)
 
+    def remove_atom(self, del_target):
+        self.bond_list[self.bond_list.index(del_target)] = '-1h'
+        self.feature += (1 << SAVE_NAME_NUM)
+
+    def append_atom(self, add_target):
+        self.bond_list[self.bond_list.index('-1h')] = add_target
+        self.feature -= (1 << SAVE_NAME_NUM)
+
 
 def add_bond(target_atom0, target_atom1, connect_num=1):
     connected_num = target_atom0.bond_list.count(target_atom1)
     if connected_num > 0:
+        target_atom0.belong.unsaturation += connect_num
+
         feature_name = "-" + str(connected_num) + target_atom1.name
         del_feature(target_atom0, feature_name)
         feature_name = "-" + str(connected_num + connect_num) + target_atom1.name
     else:
+        if connect_num>1:
+            target_atom0.belong.unsaturation += (connect_num-1)
         feature_name = "-" + str(connect_num) + target_atom1.name
     add_feature(target_atom0, feature_name)
     # print(add_point)
     for _ in range(connect_num):
-        add_point = target_atom0.bond_list.index('-1h')
-        target_atom0.bond_list[add_point] = target_atom1
+        target_atom0.append_atom(target_atom1)
 
     target_atom0, target_atom1 = target_atom1, target_atom0
 
@@ -116,40 +128,64 @@ def add_bond(target_atom0, target_atom1, connect_num=1):
     add_feature(target_atom0, feature_name)
     # print(add_point)
     for _ in range(connect_num):
-        add_point = target_atom0.bond_list.index('-1h')
-        target_atom0.bond_list[add_point] = target_atom1
+        target_atom0.append_atom(target_atom1)
         # add_point += 1
 
 
 def break_bond(target_atom0, target_atom1, single=False):
+    target_atom0.belong.unsaturation -= (target_atom0.bond_list.count(target_atom1)-1)
+
+    del_feature(target_atom0, '-' + str(target_atom0.bond_list.count(target_atom1)) + target_atom1)
     while target_atom1 in target_atom0.bond_list:
-        del_target_index = target_atom0.bond_list.index(target_atom1)
-        target_atom0.bond_list[del_target_index] = '-1h'
-        if single:
-            break
+        target_atom0.remove_atom(target_atom1)
+        # if single:
+        #     break
+
     target_atom0, target_atom1 = target_atom1, target_atom0
+
+    del_feature(target_atom0, '-' + str(target_atom0.bond_list.count(target_atom1)) + target_atom1)
     while target_atom1 in target_atom0.bond_list:
-        del_target_index = target_atom0.bond_list.index(target_atom1)
-        target_atom0.bond_list[del_target_index] = '-1h'
-        if single:
-            break
+        target_atom0.remove_atom(target_atom1)
+        # if single:
+        #     break
 
 
 def add_pi_bond(target_atom_list: list):
     if any(i.name == 'c' for i in target_atom_list):
         feature_name = 'c6-'
+        target_atom_list[0].belong.unsaturation += 4
     else:
         feature_name = 'no2-'
+        target_atom_list[0].belong.unsaturation += 1
     for target_atom in target_atom_list:
-        add_point = target_atom.bond_list.index('-1h')
         add_feature(target_atom, feature_name)
-        target_atom.bond_list[add_point] = target_atom_list
+        target_atom.append_atom(target_atom_list)
 
 
 def break_pi_bond(target_atom_list: list):
+    if any(i.name == 'c' for i in target_atom_list):
+        feature_name = 'c6-'
+        target_atom_list[0].belong.unsaturation -= 4
+    else:
+        feature_name = 'no2-'
+        target_atom_list[0].belong.unsaturation -= 1
     for target_atom in target_atom_list:
-        del_index = target_atom.bond_list.index(target_atom_list)
-        target_atom.bond_list[del_index] = '-1h'
+        del_feature(target_atom, feature_name)
+        target_atom.remove_atom(target_atom_list)
+
+
+def add_ignored_atom(target_atom, atom, num=1):
+    for _ in range(num):
+        target_atom.append_atom(atom)
+    add_feature(target_atom, '-' + str(num) + atom)
+
+
+def del_ignored_atom(target_atom, atom):
+    del_feature(target_atom,'-'+str(target_atom.bond_list.count(atom))+atom)
+    while atom in target_atom.bond_list:
+        target_atom.append_atom(atom)
+        # if single:
+        #     break
 
 
 '''
@@ -311,5 +347,6 @@ if __name__ == '__main__':
     print(c1.bond_list, c1)
     print(c2.bond_list, c2.name)
     print()
+    print(benzaldehyde.unsaturation)
     # data = json.dumps(benzaldehyde.feature)
     # print(data)

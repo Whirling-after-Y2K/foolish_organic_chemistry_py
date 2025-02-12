@@ -61,7 +61,7 @@ class Console:
             print(f'{atom.name}:')
             for connect in atom.bond_list:
                 if type(connect) is str:
-                    print(connect)
+                    print('\t' + connect)
                 elif type(connect) is list:
                     # print(connect)
                     print('\tpi:')
@@ -75,15 +75,21 @@ class Console:
         if len(atom_index_list) == 2:
             atom1 = self.molecule_dict[self.current_name][atom_index_list[0]]
             atom2 = self.molecule_dict[self.current_name][atom_index_list[1]]
-            atom1.add_bond(atom2, num)
+            oc.add_bond(atom1, atom2, num)
         else:
             atom_list = [self.molecule_dict[self.current_name][atom_index] for atom_index in atom_index_list]
             oc.connect(atom_list, is_cyclization)
 
+    def break_atom(self, atom_index1, atom_index2):
+        # if len(atom_index_list) == 2:
+        atom1 = self.molecule_dict[self.current_name][atom_index1]
+        atom2 = self.molecule_dict[self.current_name][atom_index2]
+        oc.break_bond(atom1, atom2)
+
     def connect_pi(self, atom_index_list):
-        atom1 = self.molecule_dict[self.current_name][atom_index_list[0]]
+        # atom1 = self.molecule_dict[self.current_name][atom_index_list[0]]
         atom_list = [self.molecule_dict[self.current_name][atom_index] for atom_index in atom_index_list]
-        atom1.add_pi_bond(atom_list)
+        oc.add_pi_bond(atom_list)
 
     def load(self, file):
         if file.split('.')[-1] != 'txt':
@@ -170,6 +176,8 @@ class Console:
                                 self.connect_atom(atom_index_list)
                         else:
                             self.connect_atom(atom_index_list)
+                    case 'b':
+                        self.break_atom(int(user_input[1], int(user_input[2])))
                     case 'c_pi' | 'connect_pi':
                         atom_index_list = [int(atom_index) for atom_index in user_input[1].split(',')]
                         self.connect_pi(atom_index_list)
@@ -221,5 +229,5 @@ class Console:
 if __name__ == '__main__':
     # print(oc.data)
     a = Console()
-    # a.run('log.txt')
-    a.run()
+    a.run('log.txt')
+    # a.run()
