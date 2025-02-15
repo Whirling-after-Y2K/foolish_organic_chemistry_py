@@ -64,7 +64,7 @@ class Console:
                     print('\t' + connect)
                 elif type(connect) is list:
                     # print(connect)
-                    print('\tpi:')
+                    print('\tpi:',end='\n\t')
                     for i in connect:
                         print(f"\t-{i.name} index:{self.molecule_dict[self.current_name].index(i)}", end=' ')
                     print()
@@ -90,6 +90,12 @@ class Console:
         # atom1 = self.molecule_dict[self.current_name][atom_index_list[0]]
         atom_list = [self.molecule_dict[self.current_name][atom_index] for atom_index in atom_index_list]
         oc.add_pi_bond(atom_list)
+
+    def add_ignored(self, atom_index, ignored_atom):
+        oc.add_ignored_atom(self.molecule_dict[self.current_name][atom_index], ignored_atom)
+
+    def del_ignored(self, atom_index, ignored_atom):
+        oc.del_ignored_atom(self.molecule_dict[self.current_name][atom_index], ignored_atom)
 
     def load(self, file):
         if file.split('.')[-1] != 'txt':
@@ -122,9 +128,10 @@ class Console:
                 pi = False
                 for connect in atom.bond_list:
                     if type(connect) is str:
-                        continue
+                        if connect != '-1h':
+                            f.write(f'c {atom_index} {connect}\n')
                     elif type(connect) is list:
-                        is_visited.append(connect)
+                        # is_visited.append(connect)
                         pi = connect
                         continue
                     elif self.molecule_dict[self.current_name].index(connect) in is_visited:
@@ -135,6 +142,7 @@ class Console:
                     tmp_pi = [str(self.molecule_dict[self.current_name].index(i)) for i in pi]
                     # print(','.join(tmp_pi))
                     f.write('c_pi ' + ','.join(tmp_pi) + '\n')
+                    is_visited.append(pi)
             f.write('save\n')
             f.write('end\n')
 
@@ -173,11 +181,12 @@ class Console:
                             elif user_input[2] in ['t', 'true', 'True']:
                                 self.connect_atom(atom_index_list, True)
                             else:
-                                self.connect_atom(atom_index_list)
+                                self.add_ignored(atom_index_list[0], user_input[2])
                         else:
                             self.connect_atom(atom_index_list)
                     case 'b':
-                        self.break_atom(int(user_input[1], int(user_input[2])))
+                        atom_index_list = [int(atom_index) for atom_index in user_input[1].split(',')]
+                        self.break_atom(int(atom_index_list[0]), int(atom_index_list[1]))
                     case 'c_pi' | 'connect_pi':
                         atom_index_list = [int(atom_index) for atom_index in user_input[1].split(',')]
                         self.connect_pi(atom_index_list)
@@ -200,7 +209,10 @@ class Console:
                         else:
                             self.add_atom(user_input[1])
                     case 'd' | 'del':
-                        self.del_atom(int(user_input[-1]))
+                        if user_input[-1].isdigit():
+                            self.del_atom(int(user_input[-1]))
+                        else:
+                            self.del_ignored(int(user_input[1]), user_input[2])
                     case 'save_log':
                         with open('log.txt', 'w') as f:
                             f.write(self.log)

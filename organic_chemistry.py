@@ -65,6 +65,7 @@ class Molecule:
         self.composition = []
         self.feature = []
         self.unsaturation = 0
+        self.formula = {'br': 0, 'cl': 0, 'f': 0, 'h': 0, 'i': 0, 'c': 0, 'n': 0, 'o': 0}
         # self.feature_dict = {}
         # self.link_dict = {}
         # self.c_num = 0
@@ -89,6 +90,7 @@ class Atom:
         self.overall_f = ''
         self.belong = molecule
         molecule.composition.append(self)
+        molecule.formula[self.name] += 1
 
     def remove_atom(self, del_target):
         self.bond_list[self.bond_list.index(del_target)] = '-1h'
@@ -108,8 +110,8 @@ def add_bond(target_atom0, target_atom1, connect_num=1):
         del_feature(target_atom0, feature_name)
         feature_name = "-" + str(connected_num + connect_num) + target_atom1.name
     else:
-        if connect_num>1:
-            target_atom0.belong.unsaturation += (connect_num-1)
+        if connect_num > 1:
+            target_atom0.belong.unsaturation += (connect_num - 1)
         feature_name = "-" + str(connect_num) + target_atom1.name
     add_feature(target_atom0, feature_name)
     # print(add_point)
@@ -133,9 +135,9 @@ def add_bond(target_atom0, target_atom1, connect_num=1):
 
 
 def break_bond(target_atom0, target_atom1, single=False):
-    target_atom0.belong.unsaturation -= (target_atom0.bond_list.count(target_atom1)-1)
+    target_atom0.belong.unsaturation -= (target_atom0.bond_list.count(target_atom1) - 1)
 
-    del_feature(target_atom0, '-' + str(target_atom0.bond_list.count(target_atom1)) + target_atom1)
+    del_feature(target_atom0, '-' + str(target_atom0.bond_list.count(target_atom1)) + target_atom1.name)
     while target_atom1 in target_atom0.bond_list:
         target_atom0.remove_atom(target_atom1)
         # if single:
@@ -143,7 +145,7 @@ def break_bond(target_atom0, target_atom1, single=False):
 
     target_atom0, target_atom1 = target_atom1, target_atom0
 
-    del_feature(target_atom0, '-' + str(target_atom0.bond_list.count(target_atom1)) + target_atom1)
+    del_feature(target_atom0, '-' + str(target_atom0.bond_list.count(target_atom1)) + target_atom1.name)
     while target_atom1 in target_atom0.bond_list:
         target_atom0.remove_atom(target_atom1)
         # if single:
@@ -175,15 +177,17 @@ def break_pi_bond(target_atom_list: list):
 
 
 def add_ignored_atom(target_atom, atom, num=1):
+    target_atom.belong.formula[atom] += 1
     for _ in range(num):
         target_atom.append_atom(atom)
     add_feature(target_atom, '-' + str(num) + atom)
 
 
 def del_ignored_atom(target_atom, atom):
-    del_feature(target_atom,'-'+str(target_atom.bond_list.count(atom))+atom)
+    target_atom.belong.formula[atom] -= 1
+    del_feature(target_atom, '-' + str(target_atom.bond_list.count(atom)) + atom)
     while atom in target_atom.bond_list:
-        target_atom.append_atom(atom)
+        target_atom.remove_atom(atom)
         # if single:
         #     break
 
@@ -252,7 +256,7 @@ def update_overall_f(self):
         self = will_visit[visit_point]
         distant = int(ansL[visit_point][0]) + 1
         for fa in self.bond_list:
-            if (fa == '-1h') or (fa in will_visit) or (type(fa) is list):
+            if (isinstance(fa, str)) or (fa in will_visit) or (type(fa) is list):
                 continue
             else:
                 will_visit.append(fa)
